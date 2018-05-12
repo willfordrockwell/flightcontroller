@@ -190,15 +190,15 @@ void filterAccel()
 
 void PIDs()
 {
-  PIDYaw = (int)(KpYaw * errorYaw + KdYaw * (errorYaw - lastYaw) + KiYaw * (intYaw + errorYaw));
+  PIDYaw = (int)(KpYaw * errorYaw + KdYaw * (errorYaw - lastYaw) + KiYaw * (integratedYaw + errorYaw));
   integratedYaw += errorYaw;
   lastYaw = errorYaw;
 
-  PIDRoll = (int)(KpRoll * errorRoll + KdRoll * (errorRoll - lastRoll) + KiRoll * (intRoll + errorRoll));
+  PIDRoll = (int)(KpRoll * errorRoll + KdRoll * (errorRoll - lastRoll) + KiRoll * (integratedRoll + errorRoll));
   integratedRoll += errorRoll;
   lastRoll = errorRoll;
 
-  PIDPitch = (int)(KpPitch * errorPitch + KdPitch * (errorPitch - lastPitch) + KiPitch * (intPitch + errorPitch));
+  PIDPitch = (int)(KpPitch * errorPitch + KdPitch * (errorPitch - lastPitch) + KiPitch * (integratedPitch + errorPitch));
   integratedPitch += errorPitch;
   lastPitch = errorPitch;
 }
