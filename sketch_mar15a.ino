@@ -43,9 +43,9 @@ byte message[4] = {0, 0, 0, 0};
 int dT = 2;
 
 //PID's coefficients
-float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;        //YAW   РЫСКАНЬЕ
-float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;     //ROLL  КРЕН
-float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0;  //PITCH ТАНГАЖ
+float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;       //YAW   РЫСКАНЬЕ
+float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;    //ROLL  КРЕН
+float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0; //PITCH ТАНГАЖ
 
 //PID's values to storage
 int PIDYaw = 0, PIDRoll = 0, PIDPitch = 0;
@@ -57,7 +57,7 @@ int errorYaw = 0, errorRoll = 0, errorPitch = 0;
 int lastYaw = 0, lastRoll = 0, lastPitch = 0;
 
 //Integrator values for inegration;
-int intYaw = 0, intRoll = 0, intPitch = 0;
+int integratedYaw = 0, integratedRoll = 0, integratedPitch = 0;
 
 //Values for motors
 int LF, RF, LR, RR;
@@ -87,57 +87,64 @@ float filteredGyroYaw = 0.0, filteredGyroRoll = 0.0, filteredGyroPitch = 0.0;
 float filteredAccYaw = 0.0, filteredAccRoll = 0.0, filteredAccPitch = 0.0;
 
 //Variables for Kalman's filter
-float deviationGyroYaw = 0.0, deviationGyroRoll = 0.0,  deviationGyroPitch = 0.0; //middle deviation
-float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;              //speed of working
+float deviationGyroYaw = 0.0, deviationGyroRoll = 0.0, deviationGyroPitch = 0.0; //middle deviation
+float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;             //speed of working
 
 float PcGyroYaw = 0.0, PcGyroRoll = 0.0, PcGyroPitch = 0.0;
 float GGyroYaw = 0.0, GGyroRoll = 0.0, GGyroPitch = 0.0;
 float PGyroYaw = 0.0, PGyroRoll = 0.0, PGyroPitch = 0.0;
 
-float deviationAccYaw = 0.0, deviationAccRoll = 0.0,  deviationAccPitch = 0.0;
+float deviationAccYaw = 0.0, deviationAccRoll = 0.0, deviationAccPitch = 0.0;
 float speedAccYaw = 0.0, speedAccRoll = 0.0, speedAccPitch = 0.0;
 
 float PcAccYaw = 0.0, PcAccRoll = 0.0, PcAccPitch = 0.0;
 float GAccYaw = 0.0, GAccRoll = 0.0, GAccPitch = 0.0;
 float PAccYaw = 0.0, PAccRoll = 0.0, PAccPitch = 0.0;
 
-void writeMotors() {
+void writeMotors()
+{
   leftFront.write(LF);
   rightFront.attach(RF);
   leftRear.attach(LR);
   rightRear.attach(RR);
 }
 
-void getGyro() {
+void getGyro()
+{
   inGyroX = mySensor.getGyroX();
   inGyroY = mySensor.getGyroY();
   inGyroZ = mySensor.getGyroZ();
 }
 
-void getAccel() {
+void getAccel()
+{
   inAccX = mySensor.getAccX();
   inAccY = mySensor.getAccY();
   inAccZ = mySensor.getAccZ();
 }
 
-void getAccAngles() {
+void getAccAngles()
+{
   inAccAngleX = mySensor.getAccAngleX();
   inAccAngleY = mySensor.getAccAngleY();
 }
 
-void getGyroAngles() {
+void getGyroAngles()
+{
   inGyroAngleX = mySensor.getGyroAngleX();
   inGyroAngleY = mySensor.getGyroAngleY();
   inGyroAngleZ = mySensor.getGyroAngleZ();
 }
 
-void getAngles() {
+void getAngles()
+{
   inAngleX = mySensor.getAngleX();
   inAngleY = mySensor.getAngleY();
   inAngleZ = mySensor.getAngleZ();
 }
 
-void getData() {
+void getData()
+{
   radio.read(&message, sizeof(message));
   inTrottle = message[0];
   inYaw = message[1] - 512;
@@ -145,7 +152,8 @@ void getData() {
   inPitch = message[3] - 512;
 }
 
-void filterGyro() {
+void filterGyro()
+{
   PcGyroYaw = PGyroYaw + speedGyroYaw;
   GGyroYaw = PcGyroYaw / (PcGyroYaw + deviationGyroYaw);
   PGyroYaw = (1 - GGyroYaw) * PcGyroYaw;
@@ -162,7 +170,8 @@ void filterGyro() {
   filteredGyroPitch = GGyroPitch * (inGyroY - filteredGyroPitch) + filteredGyroPitch;
 }
 
-void filterAccel() {
+void filterAccel()
+{
   PcAccYaw = PAccYaw + speedAccYaw;
   GAccYaw = PcAccYaw / (PcAccYaw + deviationAccYaw);
   PAccYaw = (1 - GAccYaw) * PcAccYaw;
@@ -179,34 +188,38 @@ void filterAccel() {
   filteredAccPitch = GAccPitch * (inAccY - filteredAccPitch) + filteredAccPitch;
 }
 
-void PIDs() {
+void PIDs()
+{
   PIDYaw = (int)(KpYaw * errorYaw + KdYaw * (errorYaw - lastYaw) + KiYaw * (intYaw + errorYaw));
-  intYaw += errorYaw;
+  integratedYaw += errorYaw;
   lastYaw = errorYaw;
 
   PIDRoll = (int)(KpRoll * errorRoll + KdRoll * (errorRoll - lastRoll) + KiRoll * (intRoll + errorRoll));
-  intRoll += errorRoll;
+  integratedRoll += errorRoll;
   lastRoll = errorRoll;
 
   PIDPitch = (int)(KpPitch * errorPitch + KdPitch * (errorPitch - lastPitch) + KiPitch * (intPitch + errorPitch));
-  intPitch += errorPitch;
+  integratedPitch += errorPitch;
   lastPitch = errorPitch;
 }
 
-void calculateErrors() {
+void calculateErrors()
+{
   errorYaw = inYaw - filteredGyroYaw;
   errorRoll = inRoll - filteredGyroRoll;
   errorPitch = inPitch - filteredGyroPitch;
 }
 
-void countMotors() {
+void countMotors()
+{
   LF = inTrottle - PIDPitch - PIDYaw + PIDRoll;
   RF = inTrottle - PIDPitch + PIDYaw - PIDRoll;
   LR = inTrottle + PIDPitch + PIDYaw + PIDRoll;
   RR = inTrottle + PIDPitch - PIDYaw - PIDRoll;
 }
 
-void setup() {
+void setup()
+{
   Serial.begin(BAUD_RATE);
   // put your setup code here, to run once:
   // setup pins (digital: 2 in for axelerometer and gyro, 2 in transmitter, 4 out for motors)
@@ -215,7 +228,7 @@ void setup() {
   leftRear.attach(4);
   rightRear.attach(5);
 
-#ifdef _ESP32_HAL_I2C_H_ // For ESP32
+#ifdef _ESP32_HAL_I2C_H_        // For ESP32
   Wire.begin(SDA_PIN, SCL_PIN); // SDA, SCL
 #else
   Wire.begin();
@@ -225,7 +238,8 @@ void setup() {
 
   if (DEBUG)
     mySensor.calcGyroOffsets(true);
-  else {
+  else
+  {
     mySensor.calcGyroOffsets();
     mySensor.setGyroOffsets(0, 0, 0);
   }
@@ -235,25 +249,28 @@ void setup() {
   radio.startListening();
 }
 
-void debugOutput(char* param) {
-  if (strcmp(param, "angle") == 0) {
-      Serial.print("\nangleX:");
-      Serial.print(inAngleX);
+void debugOutput(char *param)
+{
+  if (strcmp(param, "angle") == 0)
+  {
+    Serial.print("\nangleX:");
+    Serial.print(inAngleX);
 
-      Serial.print("\tangleY:");
-      Serial.print(inAngleY);
+    Serial.print("\tangleY:");
+    Serial.print(inAngleY);
 
-      Serial.print("\tangleZ:");
-      Serial.print(inAngleZ);
-      return;
+    Serial.print("\tangleZ:");
+    Serial.print(inAngleZ);
+    return;
   }
 }
 
-void loop() {
+void loop()
+{
   // put your main code here, to run repeatedly:
   //Get Datas
-    
-  if(radio.available()) 
+
+  if (radio.available())
     getData();
 
   mySensor.update();
