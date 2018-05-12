@@ -237,12 +237,6 @@ void countMotors()
   RR = inTrottle + PIDPitch - PIDYaw - PIDRoll;
 }
 
-/*void readCommandFromSerial()
-{
-  Serial.print("PARSED COMMAND");
-  Serial.print(parseCommandFromSerial().coord);
-  Serial.print(parseCommandFromSerial().angle);
-}*/
 void readCommandFromSerial()
 {
   float angle = 0.0;
@@ -263,9 +257,7 @@ void readCommandFromSerial()
   }
   if (i == 0)
     return;
-  message = (char[64])strtok(NULL, " ");
-  Serial.println(message);
-  angle = float(atoi(strtok(message, " ")));
+
   if (strncmp(message, "Z", 1) == 0)
     inputCoord = Z;
   else if (strncmp(message, "Y", 1) == 0)
@@ -273,7 +265,11 @@ void readCommandFromSerial()
   else if (strncmp(message, "X", 1) == 0)
     inputCoord = X;
 
+  strtok(message, " ");
+
   Serial.print("\nDEBUG READED:");
+  Serial.println("\tmessage");
+  Serial.println(message);
   Serial.print("\tinputCoord:");
   Serial.print(inputCoord);
   Serial.print("\tAngle:");
