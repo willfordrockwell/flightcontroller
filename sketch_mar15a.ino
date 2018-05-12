@@ -1,4 +1,4 @@
-#include <MPU9250_asukiaaa.h>
+#include <MPU6050_tockn.h>
 
 #include <Servo.h>
 
@@ -14,20 +14,22 @@
 #define SCL_PIN 5
 #endif
 
+#define DEBUG true
+
+#define ACCELEROMETER_COEF 0.1
+#define GYRO_COEF 0.1
+
 RF24 radio(7, 8);
 
-Servo leftFront, rightFront, leftRear, rightRear ;
+Servo leftFront, rightFront, leftRear, rightRear;
 
-MPU9250 mySensor;
+MPU6050 mySensor(Wire, ACCELEROMETER_COEF, GYRO_COEF);
 /*
   Trottle - высота  (Левый стик, вертикаль)
   Pitch - Тангаж    (Правый стик, вертикаль)
   Roll -  Крен      (Правый стик, горизонталь)
   Yaw -   Рысканье  (Левый стик, горизонталь)
 */
-
-//MPU9250 id
-uint8_t sensorId;
 
 //pipes adresses
 byte addresses[6] = "1Node";
@@ -66,6 +68,15 @@ float inGyroX = 0.0, inGyroY = 0.0, inGyroZ = 0.0;
 //Input raw values from Accel
 float inAccX = 0.0, inAccY = 0.0, inAccZ = 0.0;
 
+//Input raw values from AccelAngle
+float inAccAngleX = 0.0, inAccAngleY = 0.0;
+
+//Input raw values from GyroAngle
+float inGyroAngleX = 0.0, inGyroAngleY = 0.0, inGyroAngleZ = 0.0;
+
+//Input raw values from Angle
+float inAngleX = 0.0, inAngleY = 0.0, inAngleZ = 0.0;
+
 //Input filtered values from Gyro
 float filteredGyroYaw = 0.0, filteredGyroRoll = 0.0, filteredGyroPitch = 0.0;
 
@@ -75,12 +86,14 @@ float filteredAccYaw = 0.0, filteredAccRoll = 0.0, filteredAccPitch = 0.0;
 //Variables for Kalman's filter
 float deviationGyroYaw = 0.0, deviationGyroRoll = 0.0,  deviationGyroPitch = 0.0; //middle deviation
 float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;              //speed of working
+
 float PcGyroYaw = 0.0, PcGyroRoll = 0.0, PcGyroPitch = 0.0;
 float GGyroYaw = 0.0, GGyroRoll = 0.0, GGyroPitch = 0.0;
 float PGyroYaw = 0.0, PGyroRoll = 0.0, PGyroPitch = 0.0;
 
 float deviationAccYaw = 0.0, deviationAccRoll = 0.0,  deviationAccPitch = 0.0;
 float speedAccYaw = 0.0, speedAccRoll = 0.0, speedAccPitch = 0.0;
+
 float PcAccYaw = 0.0, PcAccRoll = 0.0, PcAccPitch = 0.0;
 float GAccYaw = 0.0, GAccRoll = 0.0, GAccPitch = 0.0;
 float PAccYaw = 0.0, PAccRoll = 0.0, PAccPitch = 0.0;
@@ -93,17 +106,32 @@ void writeMotors() {
 }
 
 void getGyro() {
-  mySensor.gyroUpdate();
-  inGyroX = mySensor.gyroX();
-  inGyroY = mySensor.gyroY();
-  inGyroZ = mySensor.gyroZ();
+  inGyroX = mySensor.getGyroX();
+  inGyroY = mySensor.getGyroY();
+  inGyroZ = mySensor.getGyroZ();
 }
 
 void getAccel() {
-  mySensor.accelUpdate();
-  inAccX = mySensor.accelX();
-  inAccY = mySensor.accelY();
-  inAccZ = mySensor.accelZ();
+  inAccX = mySensor.getAccX();
+  inAccY = mySensor.getAccY();
+  inAccZ = mySensor.getAccZ();
+}
+
+void getAccAngles() {
+  inAccAngleX = mySensor.getAccAngleX();
+  inAccAngleY = mySensor.getAccAngleY();
+}
+
+void getGyroAngles() {
+  inGyroAngleX = mySensor.getGyroAngleX();
+  inGyroAngleY = mySensor.getGyroAngleY();
+  inGyroAngleZ = mySensor.getGyroAngleZ();
+}
+
+void getAngles() {
+  inAngleX = mySensor.getAngleX();
+  inAngleY = mySensor.getAngleY();
+  inAngleZ = mySensor.getAngleZ();
 }
 
 void getData() {
@@ -189,11 +217,14 @@ void setup() {
   Wire.begin();
 #endif
 
-  mySensor.setWire(&Wire);
-  mySensor.beginAccel();
-  mySensor.beginGyro();
+  mySensor.begin();
 
-  sensorId = mySensor.readId();
+  if (DEBUG)
+    mySensor.calcGyroOffsets(true);
+  else {
+    mySensor.calcGyroOffsets();
+    mySensor.setGyroOffsets(0, 0, 0);
+  }
 
   radio.begin();
   radio.openReadingPipe(1, addresses);
@@ -204,11 +235,15 @@ void loop() {
   // put your main code here, to run repeatedly:
   //Get Datas
     
-  if(radio.available()){
+  if(radio.available()) 
     getData();
-  }
+
+  mySensor.update();
   getGyro();
   getAccel();
+  getGyroAngles();
+  getAccAngles();
+  getAngles();
  
   //filter in
   filterGyro();
