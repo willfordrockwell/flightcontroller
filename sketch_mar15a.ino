@@ -253,7 +253,7 @@ void setup()
   radio.startListening();
 }
 
-void debugOutput(char *param)
+void debugOutput(const char *param)
 {
   if (strcmp(param, "angle") == 0)
   {
