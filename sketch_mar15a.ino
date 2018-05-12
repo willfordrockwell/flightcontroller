@@ -21,6 +21,8 @@
 
 #define BAUD_RATE 19200
 
+#define MAX_SIZE_OF_SERIAL 64
+
 #define DEBUG false
 
 #define ACCELEROMETER_COEF 0.1
@@ -235,11 +237,62 @@ void countMotors()
   RR = inTrottle + PIDPitch - PIDYaw - PIDRoll;
 }
 
-void readCommandFromSerial()
+/*void readCommandFromSerial()
 {
   Serial.print("PARSED COMMAND");
   Serial.print(parseCommandFromSerial().coord);
   Serial.print(parseCommandFromSerial().angle);
+}*/
+void readCommandFromSerial()
+{
+  float angle = 0.0;
+  COORD inputCoord;
+  char message[MAX_SIZE_OF_SERIAL];
+  int i = 0;
+
+  for (i = 0; i < MAX_SIZE_OF_SERIAL; i++)
+  {
+    message[i] = '\0';
+  }
+
+  i = 0;
+  while (Serial.available() > 0 && i < MAX_SIZE_OF_SERIAL)
+  {
+    message[i] = Serial.read();
+    i++;
+  }
+  if (i == 0)
+    return;
+  message = (char[64])strtok(NULL, " ");
+  Serial.println(message);
+  angle = float(atoi(strtok(message, " ")));
+  if (strncmp(message, "Z", 1) == 0)
+    inputCoord = Z;
+  else if (strncmp(message, "Y", 1) == 0)
+    inputCoord = Y;
+  else if (strncmp(message, "X", 1) == 0)
+    inputCoord = X;
+
+  Serial.print("\nDEBUG READED:");
+  Serial.print("\tinputCoord:");
+  Serial.print(inputCoord);
+  Serial.print("\tAngle:");
+  Serial.print(angle);
+
+  // switch (inputCoord)
+  // {
+  // case Z:
+  //   inYaw = angle;
+  //   break;
+  // case Y:
+  //   inRoll = angle;
+  //   break;
+  // case X:
+  //   inPitch = angle;
+  //   break;
+  // default:
+  //   break;
+  // }
 }
 
 ANGLE_COMMAND parseCommandFromSerial()
@@ -305,10 +358,10 @@ void loop()
   if (radio.available())
     getData();
 
-  if (DEBUG)
-  {
-    readCommandFromSerial();
-  }
+  //if (DEBUG)
+  //{
+  readCommandFromSerial();
+  //}
 
   mySensor.update();
   getGyro();
@@ -317,7 +370,7 @@ void loop()
   getAccAngles();
   getAngles();
 
-  debugOutput("angle");
+  //debugOutput("angle");
 
   //filter in
   filterGyro();
