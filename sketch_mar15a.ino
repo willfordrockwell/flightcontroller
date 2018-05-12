@@ -15,9 +15,13 @@
 #define SCL_PIN 5
 #endif
 
+#define calculatedGyroOffsetX -6.65
+#define calculatedGyroOffsetY -1.62
+#define calculatedGyroOffsetZ -1.62
+
 #define BAUD_RATE 19200
 
-#define DEBUG true
+#define DEBUG false
 
 #define ACCELEROMETER_COEF 0.1
 #define GYRO_COEF 0.1
@@ -43,9 +47,9 @@ byte message[4] = {0, 0, 0, 0};
 int dT = 2;
 
 //PID's coefficients
-float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;       //YAW   РЫСКАНЬЕ
-float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;    //ROLL  КРЕН
-float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0; //PITCH ТАНГАЖ
+float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;       //YAW   РЫСКАНЬЕ - Z
+float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;    //ROLL  КРЕН     - Y
+float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0; //PITCH ТАНГАЖ   - X
 
 //PID's values to storage
 int PIDYaw = 0, PIDRoll = 0, PIDPitch = 0;
@@ -241,7 +245,7 @@ void setup()
   else
   {
     mySensor.calcGyroOffsets();
-    mySensor.setGyroOffsets(0, 0, 0);
+    mySensor.setGyroOffsets(calculatedGyroOffsetX, calculatedGyroOffsetY, calculatedGyroOffsetZ);
   }
 
   radio.begin();
