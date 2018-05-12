@@ -265,11 +265,16 @@ void readCommandFromSerial()
   else if (strncmp(message, "X", 1) == 0)
     inputCoord = X;
 
-  strtok(message, " ");
+  char *pch = strtok(message, " ");
+  pch = strtok(NULL, " ");
 
   Serial.print("\nDEBUG READED:");
   Serial.println("\tmessage");
   Serial.println(message);
+
+  Serial.println("\tpch");
+  Serial.println(pch);
+
   Serial.print("\tinputCoord:");
   Serial.print(inputCoord);
   Serial.print("\tAngle:");
