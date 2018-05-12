@@ -14,7 +14,6 @@
 #define SCL_PIN 5
 #endif
 
-
 RF24 radio(7, 8);
 
 Servo leftFront, rightFront, leftRear, rightRear ;
@@ -39,8 +38,8 @@ byte message[4] = {0, 0, 0, 0};
 int dT = 2;
 
 //PID's coefficients
-float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;                //YAW   РЫСКАНЬЕ
-float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;         //ROLL  КРЕН
+float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;        //YAW   РЫСКАНЬЕ
+float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;     //ROLL  КРЕН
 float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0;  //PITCH ТАНГАЖ
 
 //PID's values to storage
@@ -49,7 +48,7 @@ int PIDYaw = 0, PIDRoll = 0, PIDPitch = 0;
 //Errors to PID
 int errorYaw = 0, errorRoll = 0, errorPitch = 0;
 
-//Last values of errors for derivation
+//Last values of calculateErrors for derivation
 int lastYaw = 0, lastRoll = 0, lastPitch = 0;
 
 //Integrator values for inegration;
@@ -75,7 +74,7 @@ float filteredAccYaw = 0.0, filteredAccRoll = 0.0, filteredAccPitch = 0.0;
 
 //Variables for Kalman's filter
 float deviationGyroYaw = 0.0, deviationGyroRoll = 0.0,  deviationGyroPitch = 0.0; //middle deviation
-float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;                            //speed of working
+float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;              //speed of working
 float PcGyroYaw = 0.0, PcGyroRoll = 0.0, PcGyroPitch = 0.0;
 float GGyroYaw = 0.0, GGyroRoll = 0.0, GGyroPitch = 0.0;
 float PGyroYaw = 0.0, PGyroRoll = 0.0, PGyroPitch = 0.0;
@@ -107,7 +106,7 @@ void getAccel() {
   inAccZ = mySensor.accelZ();
 }
 
-void getData(){
+void getData() {
   radio.read(&message, sizeof(message));
   inTrottle = message[0];
   inYaw = message[1] - 512;
@@ -163,13 +162,13 @@ void PIDs() {
   lastPitch = errorPitch;
 }
 
-void errors() {
+void calculateErrors() {
   errorYaw = inYaw - filteredGyroYaw;
   errorRoll = inRoll - filteredGyroRoll;
   errorPitch = inPitch - filteredGyroPitch;
 }
 
-void countMotors(){
+void countMotors() {
   LF = inTrottle - PIDPitch - PIDYaw + PIDRoll;
   RF = inTrottle - PIDPitch + PIDYaw - PIDRoll;
   LR = inTrottle + PIDPitch + PIDYaw + PIDRoll;
@@ -214,8 +213,8 @@ void loop() {
   //filter in
   filterGyro();
   filterAccel();
-  //calculate errors
-  errors();
+  //calculate calculateErrors
+  calculateErrors();
   //PID
   PIDs();
   //count motors
