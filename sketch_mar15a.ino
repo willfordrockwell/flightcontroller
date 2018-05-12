@@ -26,6 +26,19 @@
 #define ACCELEROMETER_COEF 0.1
 #define GYRO_COEF 0.1
 
+typedef enum
+{
+  X,
+  Y,
+  Z
+} COORD;
+
+struct ANGLE_COMMAND
+{
+  COORD coord;
+  float angle;
+};
+
 RF24 radio(7, 8);
 
 Servo leftFront, rightFront, leftRear, rightRear;
@@ -222,6 +235,21 @@ void countMotors()
   RR = inTrottle + PIDPitch - PIDYaw - PIDRoll;
 }
 
+void readCommandFromSerial()
+{
+  Serial.print("PARSED COMMAND");
+  Serial.print(parseCommandFromSerial().coord);
+  Serial.print(parseCommandFromSerial().angle);
+}
+
+ANGLE_COMMAND parseCommandFromSerial()
+{
+  struct ANGLE_COMMAND temp;
+  temp.coord = Z;
+  temp.angle = 10;
+  return temp;
+}
+
 void setup()
 {
   Serial.begin(BAUD_RATE);
@@ -276,6 +304,11 @@ void loop()
 
   if (radio.available())
     getData();
+
+  if (DEBUG)
+  {
+    readCommandFromSerial();
+  }
 
   mySensor.update();
   getGyro();
