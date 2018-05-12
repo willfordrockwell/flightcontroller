@@ -1,0 +1,227 @@
+#include <MPU9250_asukiaaa.h>
+
+#include <Servo.h>
+
+#include <Wire.h>
+
+#include <RF24.h>
+#include <printf.h>
+#include <RF24_config.h>
+#include <nRF24L01.h>
+
+#ifdef _ESP32_HAL_I2C_H_
+#define SDA_PIN 4
+#define SCL_PIN 5
+#endif
+
+
+RF24 radio(7, 8);
+
+Servo leftFront, rightFront, leftRear, rightRear ;
+
+MPU9250 mySensor;
+/*
+  Trottle - высота  (Левый стик, вертикаль)
+  Pitch - Тангаж    (Правый стик, вертикаль)
+  Roll -  Крен      (Правый стик, горизонталь)
+  Yaw -   Рысканье  (Левый стик, горизонталь)
+*/
+
+//MPU9250 id
+uint8_t sensorId;
+
+//pipes adresses
+byte addresses[6] = "1Node";
+
+byte message[4] = {0, 0, 0, 0};
+
+//delaytime
+int dT = 2;
+
+//PID's coefficients
+float KpYaw = 1.0, KiYaw = 1.0, KdYaw = 1.0;                //YAW   РЫСКАНЬЕ
+float KpRoll = 1.0, KiRoll = 1.0, KdRoll = 1.0;         //ROLL  КРЕН
+float KpPitch = 1.0, KiPitch = 1.0, KdPitch = 1.0;  //PITCH ТАНГАЖ
+
+//PID's values to storage
+int PIDYaw = 0, PIDRoll = 0, PIDPitch = 0;
+
+//Errors to PID
+int errorYaw = 0, errorRoll = 0, errorPitch = 0;
+
+//Last values of errors for derivation
+int lastYaw = 0, lastRoll = 0, lastPitch = 0;
+
+//Integrator values for inegration;
+int intYaw = 0, intRoll = 0, intPitch = 0;
+
+//Values for motors
+int LF, RF, LR, RR;
+
+//Input values from transmitter
+int inTrottle = 0, inYaw = 0, inRoll = 0, inPitch = 0;
+
+//Input raw values from Gyro
+float inGyroX = 0.0, inGyroY = 0.0, inGyroZ = 0.0;
+
+//Input raw values from Accel
+float inAccX = 0.0, inAccY = 0.0, inAccZ = 0.0;
+
+//Input filtered values from Gyro
+float filteredGyroYaw = 0.0, filteredGyroRoll = 0.0, filteredGyroPitch = 0.0;
+
+//Input filtered values from Accel
+float filteredAccYaw = 0.0, filteredAccRoll = 0.0, filteredAccPitch = 0.0;
+
+//Variables for Kalman's filter
+float deviationGyroYaw = 0.0, deviationGyroRoll = 0.0,  deviationGyroPitch = 0.0; //middle deviation
+float speedGyroYaw = 0.0, speedGyroRoll = 0.0, speedGyroPitch = 0.0;                            //speed of working
+float PcGyroYaw = 0.0, PcGyroRoll = 0.0, PcGyroPitch = 0.0;
+float GGyroYaw = 0.0, GGyroRoll = 0.0, GGyroPitch = 0.0;
+float PGyroYaw = 0.0, PGyroRoll = 0.0, PGyroPitch = 0.0;
+
+float deviationAccYaw = 0.0, deviationAccRoll = 0.0,  deviationAccPitch = 0.0;
+float speedAccYaw = 0.0, speedAccRoll = 0.0, speedAccPitch = 0.0;
+float PcAccYaw = 0.0, PcAccRoll = 0.0, PcAccPitch = 0.0;
+float GAccYaw = 0.0, GAccRoll = 0.0, GAccPitch = 0.0;
+float PAccYaw = 0.0, PAccRoll = 0.0, PAccPitch = 0.0;
+
+void writeMotors() {
+  leftFront.write(LF);
+  rightFront.attach(RF);
+  leftRear.attach(LR);
+  rightRear.attach(RR);
+}
+
+void getGyro() {
+  mySensor.gyroUpdate();
+  inGyroX = mySensor.gyroX();
+  inGyroY = mySensor.gyroY();
+  inGyroZ = mySensor.gyroZ();
+}
+
+void getAccel() {
+  mySensor.accelUpdate();
+  inAccX = mySensor.accelX();
+  inAccY = mySensor.accelY();
+  inAccZ = mySensor.accelZ();
+}
+
+void getData(){
+  radio.read(&message, sizeof(message));
+  inTrottle = message[0];
+  inYaw = message[1] - 512;
+  inRoll = message[2] - 512;
+  inPitch = message[3] - 512;
+}
+
+void filterGyro() {
+  PcGyroYaw = PGyroYaw + speedGyroYaw;
+  GGyroYaw = PcGyroYaw / (PcGyroYaw + deviationGyroYaw);
+  PGyroYaw = (1 - GGyroYaw) * PcGyroYaw;
+  filteredGyroYaw = GGyroYaw * (inGyroZ - filteredGyroYaw) + filteredGyroYaw;
+
+  PcGyroRoll = PGyroRoll + speedGyroRoll;
+  GGyroRoll = PcGyroRoll / (PcGyroRoll + deviationGyroRoll);
+  PGyroRoll = (1 - GGyroRoll) * PcGyroRoll;
+  filteredGyroRoll = GGyroRoll * (inGyroX - filteredGyroRoll) + filteredGyroRoll;
+
+  PcGyroPitch = PGyroPitch + speedGyroPitch;
+  GGyroPitch = PcGyroPitch / (PcGyroPitch + deviationGyroPitch);
+  PGyroPitch = (1 - GGyroPitch) * PcGyroPitch;
+  filteredGyroPitch = GGyroPitch * (inGyroY - filteredGyroPitch) + filteredGyroPitch;
+}
+
+void filterAccel() {
+  PcAccYaw = PAccYaw + speedAccYaw;
+  GAccYaw = PcAccYaw / (PcAccYaw + deviationAccYaw);
+  PAccYaw = (1 - GAccYaw) * PcAccYaw;
+  filteredAccYaw = GAccYaw * (inAccZ - filteredAccYaw) + filteredAccYaw;
+
+  PcAccRoll = PAccRoll + speedAccRoll;
+  GAccRoll = PcAccRoll / (PcAccRoll + deviationAccRoll);
+  PAccRoll = (1 - GAccRoll) * PcAccRoll;
+  filteredAccRoll = GAccRoll * (inAccX - filteredAccRoll) + filteredAccRoll;
+
+  PcAccPitch = PAccPitch + speedAccPitch;
+  GAccPitch = PcAccPitch / (PcAccPitch + deviationAccPitch);
+  PAccPitch = (1 - GAccPitch) * PcAccPitch;
+  filteredAccPitch = GAccPitch * (inAccY - filteredAccPitch) + filteredAccPitch;
+}
+
+void PIDs() {
+  PIDYaw = (int)(KpYaw * errorYaw + KdYaw * (errorYaw - lastYaw) + KiYaw * (intYaw + errorYaw));
+  intYaw += errorYaw;
+  lastYaw = errorYaw;
+
+  PIDRoll = (int)(KpRoll * errorRoll + KdRoll * (errorRoll - lastRoll) + KiRoll * (intRoll + errorRoll));
+  intRoll += errorRoll;
+  lastRoll = errorRoll;
+
+  PIDPitch = (int)(KpPitch * errorPitch + KdPitch * (errorPitch - lastPitch) + KiPitch * (intPitch + errorPitch));
+  intPitch += errorPitch;
+  lastPitch = errorPitch;
+}
+
+void errors() {
+  errorYaw = inYaw - filteredGyroYaw;
+  errorRoll = inRoll - filteredGyroRoll;
+  errorPitch = inPitch - filteredGyroPitch;
+}
+
+void countMotors(){
+  LF = inTrottle - PIDPitch - PIDYaw + PIDRoll;
+  RF = inTrottle - PIDPitch + PIDYaw - PIDRoll;
+  LR = inTrottle + PIDPitch + PIDYaw + PIDRoll;
+  RR = inTrottle + PIDPitch - PIDYaw - PIDRoll;
+}
+
+void setup() {
+  // put your setup code here, to run once:
+  // setup pins (digital: 2 in for axelerometer and gyro, 2 in transmitter, 4 out for motors)
+  leftFront.attach(2);
+  rightFront.attach(3);
+  leftRear.attach(4);
+  rightRear.attach(5);
+
+#ifdef _ESP32_HAL_I2C_H_ // For ESP32
+  Wire.begin(SDA_PIN, SCL_PIN); // SDA, SCL
+#else
+  Wire.begin();
+#endif
+
+  mySensor.setWire(&Wire);
+  mySensor.beginAccel();
+  mySensor.beginGyro();
+
+  sensorId = mySensor.readId();
+
+  radio.begin();
+  radio.openReadingPipe(1, addresses);
+  radio.startListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //Get Datas
+    
+  if(radio.available()){
+    getData();
+  }
+  getGyro();
+  getAccel();
+ 
+  //filter in
+  filterGyro();
+  filterAccel();
+  //calculate errors
+  errors();
+  //PID
+  PIDs();
+  //count motors
+  countMotors();
+  //write motors
+  writeMotors();
+
+  delay(dT);
+}
