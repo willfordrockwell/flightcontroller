@@ -1,11 +1,12 @@
-#include <MPU6050_tockn.h>
+#include <printf.h>
 
 #include <Servo.h>
+
+#include <MPU6050_tockn.h>
 
 #include <Wire.h>
 
 #include <RF24.h>
-#include <printf.h>
 #include <RF24_config.h>
 #include <nRF24L01.h>
 
@@ -13,6 +14,8 @@
 #define SDA_PIN 4
 #define SCL_PIN 5
 #endif
+
+#define BAUD_RATE 19200
 
 #define DEBUG true
 
@@ -204,6 +207,7 @@ void countMotors() {
 }
 
 void setup() {
+  Serial.begin(BAUD_RATE);
   // put your setup code here, to run once:
   // setup pins (digital: 2 in for axelerometer and gyro, 2 in transmitter, 4 out for motors)
   leftFront.attach(2);
@@ -231,6 +235,20 @@ void setup() {
   radio.startListening();
 }
 
+void debugOutput(char* param) {
+  if (strcmp(param, "angle") == 0) {
+      Serial.print("\nangleX:");
+      Serial.print(inAngleX);
+
+      Serial.print("\tangleY:");
+      Serial.print(inAngleY);
+
+      Serial.print("\tangleZ:");
+      Serial.print(inAngleZ);
+      return;
+  }
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   //Get Datas
@@ -244,7 +262,9 @@ void loop() {
   getGyroAngles();
   getAccAngles();
   getAngles();
- 
+
+  debugOutput("angle");
+
   //filter in
   filterGyro();
   filterAccel();
