@@ -258,11 +258,11 @@ void readCommandFromSerial()
   if (i == 0)
     return;
 
-  if (strncmp(message, "Z", 1) == 0)
+  if (strncmp(message, "Z", 1) == 0 || strncmp(message, "z", 1) == 0)
     inputCoord = Z;
-  else if (strncmp(message, "Y", 1) == 0)
+  else if (strncmp(message, "Y", 1) == 0 || strncmp(message, "y", 1) == 0)
     inputCoord = Y;
-  else if (strncmp(message, "X", 1) == 0)
+  else if (strncmp(message, "X", 1) == 0 || strncmp(message, "x", 1) == 0)
     inputCoord = X;
 
   char *pch = strtok(message, " ");
@@ -279,6 +279,7 @@ void readCommandFromSerial()
   Serial.print(inputCoord);
   Serial.print("\tAngle:");
   Serial.print(angle);
+  Serial.flush();
 
   // switch (inputCoord)
   // {
